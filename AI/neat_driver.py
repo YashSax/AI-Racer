@@ -1,3 +1,9 @@
+'''
+TODO: Deal with intersecting paths, when looking to increment currWaypoint, only look for the next
+or previous one, not just the one you're in range of
+
+'''
+
 from CarEnvironment import CarEnvironment
 from car import Car
 import numpy as np
@@ -7,20 +13,20 @@ import pickle
 import neat
 from tqdm import tqdm
 import pygame
+import random
+
 pygame.init()
-
-GAME_SIZE = 500
-START_POS = (20, GAME_SIZE - 30)
+GAME_DIM = (1250, 630)
+START_POS = (20, GAME_DIM[0] - 30)
 BLOCK_SIZE = 2
-GAME_DIM = (GAME_SIZE, GAME_SIZE)
 
-board = np.load("./AI/boards/curved/curved_board.npy")
-waypoints = np.load("./AI/boards/curved/curved_waypoints.npy")
-bg = pygame.image.load('./AI/boards/curved/curved.jpeg')
-SCREEN = pygame.display.set_mode(GAME_DIM)
+
+board = np.load("./AI/boards/testbig/testbig_board.npy")
+waypoints = np.load("./AI/boards/testbig/testbig_waypoints.npy")
+bg = pygame.image.load('./AI/boards/testbig/testbig.jpeg')
 
 runs_per_net = 1
-generations = 10
+generations = 1 #100
 
 def eval_genome(genome, config):
     # create the network based off the config file
@@ -28,16 +34,16 @@ def eval_genome(genome, config):
     fitnesses = []
 
     for runs in range(runs_per_net):
-        c = Car(0.2, 0.2, START_POS, board, waypoints, bg, BLOCK_SIZE, GAME_DIM, user="AI", SCREEN=SCREEN)
+        c = Car(0.4, 0.4, START_POS, board, waypoints, bg, BLOCK_SIZE, GAME_DIM, user="AI")
         sim = CarEnvironment(c)
         done = False
         obs = sim.reset()
+        actuate = lambda a: a >= 0.5
 
         while not done:
             actions = np.array(net.activate(obs))
-            actuate = lambda a: a >= 0.5
             obs, reward, done, info = sim.step(actuate(actions))
-            sim.render()
+            # sim.render()
         fitnesses.append(reward)
     return min(fitnesses)
 
@@ -54,12 +60,12 @@ def main():
     pop.add_reporter(stats)
     pop.add_reporter(neat.StdOutReporter(True))
     
-    NUM_CPU_CORES = 1
+    NUM_CPU_CORES = 4
     pe = neat.ParallelEvaluator(NUM_CPU_CORES, eval_genome)
     winner = pop.run(pe.evaluate,generations)
 
     # Save the winner.
-    with open('winner', 'wb') as f:
+    with open('./AI/models/winner', 'wb') as f:
         pickle.dump(winner, f)
 
     # Show winning neural network

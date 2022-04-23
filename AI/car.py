@@ -3,23 +3,25 @@ from utils import blit_rotate_center
 import math
 import numpy as np
 
+# TODO: make car start facing next waypoint
+
 class Car:
-    def __init__(self, max_vel, rotation_vel, startPos, board, waypoints, background, BLOCK_SIZE, GAME_DIM, user="HUMAN", SCREEN=None):
+    def __init__(self, max_vel, rotation_vel, startPos, board, waypoints, background, BLOCK_SIZE, GAME_DIM, user="HUMAN", SCREEN=None, START_ANGLE=0, START_WAYPOINT = 0):
         self.startPos = startPos
-        try:
-            self.img = pygame.image.load("./AI/car.png")
-        except:
-            self.img = pygame.image.load("./car.png")
         self.max_vel = max_vel
         self.vel = 0
         self.rotation_vel = rotation_vel
-        self.angle = 0
+        self.angle = START_ANGLE
         self.x, self.y = startPos
         self.board = board
         self.waypoints = waypoints
         self.background = background
         self.BLOCK_SIZE = BLOCK_SIZE
-        self.currWaypoint = 0
+        # startingWaypoint used for training where cars start at a 
+        # random position in the road to avoid overfitting
+        self.startingWaypoint = START_WAYPOINT
+        self.currWaypoint = 0 
+
         self.GAME_DIM = GAME_DIM
         self.SCREEN = SCREEN
 
@@ -31,8 +33,16 @@ class Car:
         self.acceleration = 0.001
         self.user = user
         if (user == "HUMAN"):
+            try:
+                self.img = pygame.image.load("./AI/player_car.png")
+            except:
+                self.img = pygame.image.load("./player_car.png")
             self.keybind_dict = {pygame.K_LEFT:"left", pygame.K_RIGHT:"right", pygame.K_UP:"up"}
         elif (user == "AI"):
+            try:
+                self.img = pygame.image.load("./AI/car.png")
+            except:
+                self.img = pygame.image.load("./car.png")
             actions = ["left","right","up"]
             self.actionMap = lambda a : [actions[i] for i in range(len(a)) if a[i] == 1]
         else:
@@ -40,7 +50,7 @@ class Car:
         
         self.INCREMENT_GRANULARITY = 2 # accuracy of observations - higher = faster but less accurate
         self.timestep = 0
-        self.stallingFor = 0 # number of timesteps where no actionse have occured
+        self.stallingFor = 0 # number of timesteps where no actions have occured   
         self.stallsUntilDone = 2500 # number of timesteps stalled causes sim to end
 
     def rotate(self, left=False, right=False):
@@ -75,8 +85,13 @@ class Car:
         self.y = min(self.y, h - 30)
         self.x = min(self.x, w - 30)
 
-        if self.currWaypoint < len(self.waypoints) and self.distance((self.x // self.BLOCK_SIZE, self.y // self.BLOCK_SIZE), tuple(self.waypoints[self.currWaypoint])) <= 40:
-            self.currWaypoint += 1
+        WAYPOINT_THRESH = 20
+        for idx, waypoint in enumerate(self.waypoints):
+            if self.distance((self.x // self.BLOCK_SIZE, self.y // self.BLOCK_SIZE), waypoint) <= WAYPOINT_THRESH:
+                self.currWaypoint = idx
+
+        # if self.currWaypoint < len(self.waypoints) and self.distance((self.x // self.BLOCK_SIZE, self.y // self.BLOCK_SIZE), tuple(self.waypoints[self.currWaypoint])) <= 40:
+        #     self.currWaypoint += 1
 
     def reduce_speed(self):
         self.vel -= self.acceleration
@@ -103,17 +118,27 @@ class Car:
         self.stallingFor = self.stallingFor + 1 if prevPos == afterPos else 0
     
     def reward(self):
-        completionPercentage = self.currWaypoint / len(self.waypoints)
+        # TODO: reward for facing the direction you're supposed to be going in
+        completionPercentage = (self.currWaypoint - self.startingWaypoint) / (len(self.waypoints) - self.startingWaypoint)
         reward = 0
+        correctDirection = False
         if self.currWaypoint < len(self.waypoints) - 1: # check if there is a next waypoint
             first_leg = self.distance((self.x // self.BLOCK_SIZE, self.y // self.BLOCK_SIZE), tuple(self.waypoints[self.currWaypoint]))
             second_leg = self.distance(tuple(self.waypoints[self.currWaypoint]), tuple(self.waypoints[self.currWaypoint + 1]))
             reward += second_leg / (second_leg + first_leg)
 
-        if (self.checkTerminal() == "WIN"):
-            reward += max(0, 20 + 20 * completionPercentage) - self.timestep * 0.0001
+            targetAngle = math.atan2(self.waypoints[self.currWaypoint + 1][1] - self.waypoints[self.currWaypoint][1], \
+                self.waypoints[self.currWaypoint + 1][0] - self.waypoints[self.currWaypoint][0])
+            targetAngle = abs(np.rad2deg(targetAngle) - 90) % 180
+            angleDiff = abs(targetAngle - self.angle) % 180
+            if (angleDiff <= 20 or angleDiff >= 160):
+                correctDirection = True
         else:
-            reward += max(0, 20 * completionPercentage) - self.timestep * 0.0001
+            correctDirection = True
+        winBonus = 20 if self.checkTerminal() == "WIN" else 0
+        completionBonus = 20 * completionPercentage
+        timePenalty = self.timestep * 0.001
+        reward += max(0, winBonus + completionBonus - timePenalty)
         return reward
     
     def checkTerminal(self):
@@ -125,7 +150,7 @@ class Car:
             return "LOSE"
         xPos = int((self.x + self.CENTER_OFFSET) // self.BLOCK_SIZE)
         yPos = int((self.y + self.CENTER_OFFSET) // self.BLOCK_SIZE)
-        if xPos >= 240 and yPos <= 10:
+        if xPos >= (self.GAME_DIM[0] // self.BLOCK_SIZE - 20) and yPos <= 20:
             return "WIN"
         return "NONE"
 
@@ -144,7 +169,6 @@ class Car:
                 currPos = tuple(map(lambda x, y: x + y, currPos, adjustedIncrement))
             if visualizeObservations:
                 pygame.draw.circle(self.SCREEN, (200, 0, 0), currPos, 3)
-                pygame.display.update()
             return self.distance(pos, currPos) // self.BLOCK_SIZE
         
         straightXIncrement = -1*math.sin(math.radians(self.angle))
@@ -159,6 +183,19 @@ class Car:
         leftDiagonalDistance = getDistanceByIncrement((self.x, self.y), leftDiagonalIncrement)
         obs = [straightDistance, leftDistance, rightDistance, leftDiagonalDistance, rightDiagonalDistance]
         self.obs = np.array(obs)
+        if visualizeObservations:
+            for waypoint in self.waypoints:
+                adjusted_waypoint = (self.BLOCK_SIZE * waypoint[0], self.BLOCK_SIZE * waypoint[1])
+                pygame.draw.circle(self.SCREEN, (0, 0, 200), adjusted_waypoint, 3)
+            pygame.display.update()
+
+            if (self.currWaypoint + 1 < len(self.waypoints)):
+                a = self.waypoints[self.currWaypoint + 1]
+                a[0] *= self.BLOCK_SIZE
+                a[1] *= self.BLOCK_SIZE
+                pygame.draw.circle(self.SCREEN, (0, 200,200), a, 3)
+            pygame.display.update()
+
         return self.obs
     
     def reset(self):
@@ -170,4 +207,5 @@ class Car:
     
     def distance(self, p1, p2):
         return ((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)**0.5
-    
+        
+        
