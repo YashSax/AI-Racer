@@ -5,6 +5,7 @@ import neat
 import os
 import pickle
 import numpy as np
+from car import Car
 
 BLOCK_SIZE = 2
 GAME_DIM = (1250, 630)
@@ -16,7 +17,7 @@ config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                      neat.DefaultSpeciesSet, neat.DefaultStagnation,
                      config_path)
 
-with open("./big_winner", 'rb') as f:
+with open("./big2_winner", 'rb') as f:
     genome = pickle.load(f)
 net = neat.nn.FeedForwardNetwork.create(genome, config)
 
@@ -45,9 +46,9 @@ def get_post_javascript_data():
     # s, l, r, ld, rd
     obs_keys = ["javascript_data[s]", "javascript_data[l]", "javascript_data[r]", "javascript_data[ld]", "javascript_data[rd]"]
     obs = [float(dict(request.form)[k]) for k in obs_keys]
-    print("Python Full Observation:", dict(request.form))
-    print("Python Observation:", obs)
+    print(obs)
     actions = actuate(np.array(net.activate(obs)))
+    print("Observation:", obs)
     print("Action:", actions)
     return render_template("index.html")
 

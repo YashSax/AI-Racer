@@ -37,13 +37,13 @@ const predInterval = setInterval(function() {
             if (third == "True") {
                 predictedAction.push("right");
             }
-            // AI_car.step(predictedAction);
+            AI_car.step(predictedAction);
         },
         error: function(xhr) {
             console.log("Error" + JSON.stringify(xhr));
         }
     });            
-}, 20);;
+}, 25);;
 
 function createArray(length) {
     var arr = new Array(length || 0),
@@ -172,7 +172,13 @@ class Car {
         var leftDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], leftDiagonalIncrement);
         var rightDiagonalIncrement = [sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement)];
         var rightDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], rightDiagonalIncrement);
-        let obs = {"s":straightDistance, "l":leftDistance, "r":rightDistance, "ld":leftDiagonalDistance, "rd":rightDiagonalDistance};
+        if (self.theta >= 90 && self.theta <= 270) {
+            [leftDistance, rightDistance] = [rightDistance, leftDistance];
+            [leftDiagonalDistance, rightDiagonalDistance] = [rightDiagonalDistance, leftDiagonalDistance];
+        }
+        var offset = 0
+        let obs = {"s":straightDistance + offset, "l":leftDistance + offset, "r":rightDistance + offset, "ld":leftDiagonalDistance + offset, "rd":rightDiagonalDistance + offset};
+        console.log("Observation: " + JSON.stringify(obs));
         return obs;
     }
 }
@@ -195,6 +201,7 @@ function setup() {
     saveBoardButton.mousePressed(saveBoard);
     player_car = new Car(20, windowHeight - 20, 2, 2, true, windowWidth, windowHeight);
     AI_car = new Car(30, windowHeight - 20, 2, 2, false, windowWidth, windowHeight);
+    frameRate(60);
 }
 
 function mouseDragged() {
@@ -242,10 +249,12 @@ function draw() {
         ellipse(AI_car.xPos, AI_car.yPos, 40, 40);
         fill(105, 105, 105);
         roadPoints.forEach(point => {
+            // update player road
             var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
             if (dist <= 80) {
                 ellipse(point[0], point[1], 80, 80);
             }
+            // update AI road
             var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
             if (dist <= 80) {
                 ellipse(point[0], point[1], 80, 80);
@@ -258,11 +267,11 @@ function draw() {
         if (keyIsDown(UP_ARROW)) { keysPressed.push("up"); }
 
         player_car.render();
-        // player_car.step(keysPressed);
+        player_car.step(keysPressed);
 
         AI_car.render();
-        AI_car.step(keysPressed);
-        console.log(AI_car.observe());
+        // AI_car.step(keysPressed);
+        // console.log(AI_car.observe());
 
         // console.log("Observation: " + AI_car.observe());
         
@@ -271,6 +280,8 @@ function draw() {
         var AI_groundOn = board[AI_X][AI_Y];
         if (AI_groundOn == GRASS_CODE) {
             AI_crash = true;
+            fill(255,0,0);
+            ellipse(90,90,90,90);
             clearInterval(predInterval); // stop AI driving;
         }
 

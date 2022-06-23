@@ -8,6 +8,7 @@ import neat
 import os
 
 import sys
+import keyboard
 
 BLOCK_SIZE = 2
 GAME_DIM = (1250, 630)
@@ -43,7 +44,6 @@ def main():
         actions = np.array(net.activate(obs))
         def actuate(a): return a >= 0.5
         obs, reward, done, info = sim.step(actuate(actions))
-        # print("Observation:", obs)
         # print("Action:", actuate(actions))
         sim.render()
     print("Reward:", reward)

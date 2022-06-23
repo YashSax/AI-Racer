@@ -182,6 +182,7 @@ class Car:
         leftDiagonalIncrement = (sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement))
         leftDiagonalDistance = getDistanceByIncrement((self.x, self.y), leftDiagonalIncrement)
         obs = [straightDistance, leftDistance, rightDistance, leftDiagonalDistance, rightDiagonalDistance]
+        
         self.obs = np.array(obs)
         if visualizeObservations:
             for waypoint in self.waypoints:
