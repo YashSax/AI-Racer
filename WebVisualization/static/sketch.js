@@ -14,7 +14,7 @@ const predInterval = setInterval(function() {
     if (AI_crash || !showRoad) {
         return;
     }
-    let observation = AI_car.observe();
+    let observation = JSON.stringify(AI_car.observe());
     $.post("/postmethod", {
         javascript_data: observation
     });
@@ -37,6 +37,7 @@ const predInterval = setInterval(function() {
             if (third == "True") {
                 predictedAction.push("right");
             }
+            console.log(predictedAction)
             AI_car.step(predictedAction);
         },
         error: function(xhr) {
@@ -44,6 +45,13 @@ const predInterval = setInterval(function() {
         }
     });            
 }, 25);;
+
+function sendBoard(arg_board) {
+    console.log(arg_board)
+    $.post("/board", {
+        javascript_data: arg_board
+    });
+}
 
 function createArray(length) {
     var arr = new Array(length || 0),
@@ -162,23 +170,26 @@ class Car {
     }
 
     observe() {
-        var straightXIncrement = -1 * Math.sin(radians(this.theta));
-        var straightYIncrement = -1 * Math.cos(radians(this.theta));
-        var straightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightXIncrement, straightYIncrement]);
-        var leftDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [-1 * straightYIncrement, straightXIncrement]);
-        var rightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightYIncrement, -1 * straightXIncrement]);
-        var sqrt2by2 = Math.sqrt(2) / 2;
-        var leftDiagonalIncrement = [sqrt2by2 * (straightXIncrement - straightYIncrement), sqrt2by2 * (straightXIncrement + straightYIncrement)];
-        var leftDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], leftDiagonalIncrement);
-        var rightDiagonalIncrement = [sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement)];
-        var rightDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], rightDiagonalIncrement);
-        if (self.theta >= 90 && self.theta <= 270) {
-            [leftDistance, rightDistance] = [rightDistance, leftDistance];
-            [leftDiagonalDistance, rightDiagonalDistance] = [rightDiagonalDistance, leftDiagonalDistance];
-        }
-        var offset = 0
-        let obs = {"s":straightDistance + offset, "l":leftDistance + offset, "r":rightDistance + offset, "ld":leftDiagonalDistance + offset, "rd":rightDiagonalDistance + offset};
-        console.log("Observation: " + JSON.stringify(obs));
+        // var straightXIncrement = -1 * Math.sin(radians(this.theta));
+        // var straightYIncrement = -1 * Math.cos(radians(this.theta));
+        // var straightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightXIncrement, straightYIncrement]);
+        // var leftDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [-1 * straightYIncrement, straightXIncrement]);
+        // var rightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightYIncrement, -1 * straightXIncrement]);
+        // var sqrt2by2 = Math.sqrt(2) / 2;
+        // var leftDiagonalIncrement = [sqrt2by2 * (straightXIncrement - straightYIncrement), sqrt2by2 * (straightXIncrement + straightYIncrement)];
+        // var leftDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], leftDiagonalIncrement);
+        // var rightDiagonalIncrement = [sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement)];
+        // var rightDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], rightDiagonalIncrement);
+        // if (self.theta >= 90 && self.theta <= 270) {
+        //     [leftDistance, rightDistance] = [rightDistance, leftDistance];
+        //     [leftDiagonalDistance, rightDiagonalDistance] = [rightDiagonalDistance, leftDiagonalDistance];
+        // }
+        // var offset = 0
+        // let obs = {"s":straightDistance + offset, "l":leftDistance + offset, "r":rightDistance + offset, "ld":leftDiagonalDistance + offset, "rd":rightDiagonalDistance + offset};
+        
+        // NOTE: removed board
+        let obs = {"angle":Math.round(this.theta), "x":Math.round(this.xPos), "y":Math.round(this.yPos)}
+        // console.log("Observation: " + JSON.stringify(obs));
         return obs;
     }
 }
@@ -230,6 +241,7 @@ function colorNear() {
 }
 
 function saveBoard() {
+    sendBoard(board);
     showRoad = true;
 }
 

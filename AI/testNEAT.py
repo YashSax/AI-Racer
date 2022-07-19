@@ -45,7 +45,7 @@ def main():
         def actuate(a): return a >= 0.5
         obs, reward, done, info = sim.step(actuate(actions))
         # print("Action:", actuate(actions))
-        sim.render()
+        # sim.render()
     print("Reward:", reward)
 
 if __name__ == "__main__":

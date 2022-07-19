@@ -4,7 +4,19 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
+
+
+
+        {
+            "name": "App.py",
+            "type": "python",
+            "cwd": "C:/Yash/Projects/AIRacer/WebVisualization",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["bt"]
+        },  
 
         {
             "name": "Python: Current File",

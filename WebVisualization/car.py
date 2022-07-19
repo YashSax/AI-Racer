@@ -33,16 +33,8 @@ class Car:
         self.acceleration = 0.001
         self.user = user
         if (user == "HUMAN"):
-            try:
-                self.img = pygame.image.load("./AI/player_car.png")
-            except:
-                self.img = pygame.image.load("./player_car.png")
             self.keybind_dict = {pygame.K_LEFT:"left", pygame.K_RIGHT:"right", pygame.K_UP:"up"}
         elif (user == "AI"):
-            try:
-                self.img = pygame.image.load("./AI/car.png")
-            except:
-                self.img = pygame.image.load("./car.png")
             actions = ["left","right","up"]
             self.actionMap = lambda a : [actions[i] for i in range(len(a)) if a[i] == 1]
         else:
@@ -169,6 +161,7 @@ class Car:
                 currPos = tuple(map(lambda x, y: x + y, currPos, adjustedIncrement))
             if visualizeObservations:
                 pygame.draw.circle(self.SCREEN, (200, 0, 0), currPos, 3)
+            # print("retVal:",self.distance(pos, currPos) / self.BLOCK_SIZE)
             return self.distance(pos, currPos) // self.BLOCK_SIZE
         
         straightXIncrement = -1*math.sin(math.radians(self.angle))
@@ -182,21 +175,7 @@ class Car:
         leftDiagonalIncrement = (sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement))
         leftDiagonalDistance = getDistanceByIncrement((self.x, self.y), leftDiagonalIncrement)
         obs = [straightDistance, leftDistance, rightDistance, leftDiagonalDistance, rightDiagonalDistance]
-        
         self.obs = np.array(obs)
-        if visualizeObservations:
-            for waypoint in self.waypoints:
-                adjusted_waypoint = (self.BLOCK_SIZE * waypoint[0], self.BLOCK_SIZE * waypoint[1])
-                pygame.draw.circle(self.SCREEN, (0, 0, 200), adjusted_waypoint, 3)
-            pygame.display.update()
-
-            if (self.currWaypoint + 1 < len(self.waypoints)):
-                a = self.waypoints[self.currWaypoint + 1]
-                a[0] *= self.BLOCK_SIZE
-                a[1] *= self.BLOCK_SIZE
-                pygame.draw.circle(self.SCREEN, (0, 200,200), a, 3)
-            pygame.display.update()
-
         return self.obs
     
     def reset(self):
