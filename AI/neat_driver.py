@@ -21,12 +21,12 @@ START_POS = (20, GAME_DIM[0] - 30)
 BLOCK_SIZE = 2
 
 
-board = np.load("./AI/boards/testbig/testbig_board.npy")
-waypoints = np.load("./AI/boards/testbig/testbig_waypoints.npy")
-bg = pygame.image.load('./AI/boards/testbig/testbig.jpeg')
+board = np.load("./AI/boards/fixed_pos_train/fixed_pos_train_board.npy")
+waypoints = np.load("./AI/boards/fixed_pos_train/fixed_pos_train_waypoints.npy")
+bg = pygame.image.load('./AI/boards/fixed_pos_train/fixed_pos_train.jpeg')
 
 runs_per_net = 1
-generations = 1 #100
+generations = 100
 
 def eval_genome(genome, config):
     # create the network based off the config file
@@ -65,7 +65,7 @@ def main():
     winner = pop.run(pe.evaluate,generations)
 
     # Save the winner.
-    with open('./AI/models/winner', 'wb') as f:
+    with open('./AI/models/fixed_pos_winner', 'wb') as f:
         pickle.dump(winner, f)
 
     # Show winning neural network

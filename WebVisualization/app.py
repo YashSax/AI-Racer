@@ -5,7 +5,6 @@ import neat
 import os
 import pickle
 import numpy as np
-from car import Car
 import ast
 
 BLOCK_SIZE = 2
@@ -18,11 +17,11 @@ config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                      neat.DefaultSpeciesSet, neat.DefaultStagnation,
                      config_path)
 try:
-    with open("./big_winner", 'rb') as f:
+    with open("./fixed_pos_winner", 'rb') as f:
         genome = pickle.load(f)
 except Exception as e:
     print("File not found in base directory, using full path")
-    with open("./WebVisualization/big2_winner", 'rb') as f:
+    with open("./WebVisualization/fixed_pos_winner", 'rb') as f:
         genome = pickle.load(f)
 
 net = neat.nn.FeedForwardNetwork.create(genome, config)
@@ -39,41 +38,19 @@ def actuate(a):
 
 @app.route('/')
 def home():
-    data = {"left":0, "right":0, "up":0}
     return render_template('index.html')
 
 @app.route('/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
 
-@app.route('/board', methods=['POST'])
-def get_board():
-    global board
-    s = dict(request.form)['javascript_data'].split(",")
-    board_str = ",".join(s[0:-3]).split(":")[1]
-    board = ast.literal_eval(board_str)
-    print(board)
-    return
-
 @app.route('/postmethod', methods = ['POST'])
 def get_post_javascript_data():
     global actions
     # s, l, r, ld, rd
-    obs_keys = ["angle", "x", "y"]
-    s = dict(request.form)["javascript_data"]
-    split_string = s.split(",")
-    angle = int(split_string[-3].split(":")[-1])
-    x = int(split_string[-2].split(":")[1])
-    y = int(split_string[-1].split(":")[1][:-1])
-
-    if board is not None:
-        player_car = Car(0.4, 0.4, (x, y), board, None,
-                None, BLOCK_SIZE, GAME_DIM, user="AI")
-        player_car.angle = angle
-        player_car.observe()
-        actions = actuate(np.array(net.activate(player_car.obs)))
-    # print("Observation:", obs)
-    # print("Action:", actions)
+    obs_keys = ["javascript_data[s]", "javascript_data[l]", "javascript_data[r]", "javascript_data[ld]", "javascript_data[rd]"]
+    obs = [float(dict(request.form)[k]) for k in obs_keys]
+    actions = actuate(np.array(net.activate(obs)))
     return render_template("index.html")
 
 @app.route("/predictions", methods=['GET', 'POST'])

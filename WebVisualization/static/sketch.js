@@ -7,14 +7,15 @@ const roadPoints = [];
 var showRoad = false;
 let player_car;
 let AI_car;
-let INCREMENT_GRANULARITY = 2;
+let INCREMENT_GRANULARITY = 1;
 let AI_crash = false;
+let winner = "none"
 
-const predInterval = setInterval(function() {
+const predInterval = setInterval(function () {
     if (AI_crash || !showRoad) {
         return;
     }
-    let observation = JSON.stringify(AI_car.observe());
+    let observation = AI_car.observe();
     $.post("/postmethod", {
         javascript_data: observation
     });
@@ -24,34 +25,29 @@ const predInterval = setInterval(function() {
         url: "/predictions",
         type: "get",
         data: {},
-        success: function(response) {
+        success: function (response) {
             var first = $($.parseHTML(response)).filter("#0").text();
             var second = $($.parseHTML(response)).filter("#1").text();
             var third = $($.parseHTML(response)).filter("#2").text();
             if (first == "True") {
-                predictedAction.push("left");   
+                predictedAction.push("left");
             }
             if (second == "True") {
-                predictedAction.push("up");
-            }
-            if (third == "True") {
                 predictedAction.push("right");
             }
+            if (third == "True") {
+                predictedAction.push("up");
+            }
             console.log(predictedAction)
-            AI_car.step(predictedAction);
+            if (winner == "none") {
+                AI_car.step(predictedAction);
+            }
         },
-        error: function(xhr) {
+        error: function (xhr) {
             console.log("Error" + JSON.stringify(xhr));
         }
-    });            
-}, 25);;
-
-function sendBoard(arg_board) {
-    console.log(arg_board)
-    $.post("/board", {
-        javascript_data: arg_board
     });
-}
+}, 25);;
 
 function createArray(length) {
     var arr = new Array(length || 0),
@@ -170,26 +166,26 @@ class Car {
     }
 
     observe() {
-        // var straightXIncrement = -1 * Math.sin(radians(this.theta));
-        // var straightYIncrement = -1 * Math.cos(radians(this.theta));
-        // var straightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightXIncrement, straightYIncrement]);
-        // var leftDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [-1 * straightYIncrement, straightXIncrement]);
-        // var rightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightYIncrement, -1 * straightXIncrement]);
-        // var sqrt2by2 = Math.sqrt(2) / 2;
-        // var leftDiagonalIncrement = [sqrt2by2 * (straightXIncrement - straightYIncrement), sqrt2by2 * (straightXIncrement + straightYIncrement)];
-        // var leftDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], leftDiagonalIncrement);
-        // var rightDiagonalIncrement = [sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement)];
-        // var rightDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], rightDiagonalIncrement);
-        // if (self.theta >= 90 && self.theta <= 270) {
-        //     [leftDistance, rightDistance] = [rightDistance, leftDistance];
-        //     [leftDiagonalDistance, rightDiagonalDistance] = [rightDiagonalDistance, leftDiagonalDistance];
-        // }
-        // var offset = 0
-        // let obs = {"s":straightDistance + offset, "l":leftDistance + offset, "r":rightDistance + offset, "ld":leftDiagonalDistance + offset, "rd":rightDiagonalDistance + offset};
-        
-        // NOTE: removed board
-        let obs = {"angle":Math.round(this.theta), "x":Math.round(this.xPos), "y":Math.round(this.yPos)}
-        // console.log("Observation: " + JSON.stringify(obs));
+        var straightXIncrement = -1 * Math.sin(radians(this.theta));
+        var straightYIncrement = -1 * Math.cos(radians(this.theta));
+        var straightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightXIncrement, straightYIncrement]);
+        var leftDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [-1 * straightYIncrement, straightXIncrement]);
+        var rightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightYIncrement, -1 * straightXIncrement]);
+        var sqrt2by2 = Math.sqrt(2) / 2;
+        var leftDiagonalIncrement = [sqrt2by2 * (straightXIncrement - straightYIncrement), sqrt2by2 * (straightXIncrement + straightYIncrement)];
+        var leftDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], leftDiagonalIncrement);
+        var rightDiagonalIncrement = [sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement)];
+        var rightDiagonalDistance = this.getDistanceByIncrement([this.xPos, this.yPos], rightDiagonalIncrement);
+        if (self.theta >= 90 && self.theta <= 270) {
+            [leftDistance, rightDistance] = [rightDistance, leftDistance];
+            [leftDiagonalDistance, rightDiagonalDistance] = [rightDiagonalDistance, leftDiagonalDistance];
+        }
+        var offset = 0
+        let obs = { "s": straightDistance + offset, "l": leftDistance + offset, "r": rightDistance + offset, "ld": leftDiagonalDistance + offset, "rd": rightDiagonalDistance + offset };
+
+        // // NOTE: removed board
+        // let obs = {"angle":Math.round(this.theta), "x":Math.round(this.xPos), "y":Math.round(this.yPos)}
+        console.log("Observation: " + JSON.stringify(obs));
         return obs;
     }
 }
@@ -207,11 +203,11 @@ function setup() {
         }
     }
     background(156, 175, 136); // Grass
-    saveBoardButton = createButton("Save Board");
+    saveBoardButton = createButton("Start the Race!");
     saveBoardButton.position(0, 0);
     saveBoardButton.mousePressed(saveBoard);
     player_car = new Car(20, windowHeight - 20, 2, 2, true, windowWidth, windowHeight);
-    AI_car = new Car(30, windowHeight - 20, 2, 2, false, windowWidth, windowHeight);
+    AI_car = new Car(40, windowHeight - 20, 3, 3, false, windowWidth, windowHeight);
     frameRate(60);
 }
 
@@ -241,7 +237,6 @@ function colorNear() {
 }
 
 function saveBoard() {
-    sendBoard(board);
     showRoad = true;
 }
 
@@ -278,22 +273,30 @@ function draw() {
         if (keyIsDown(RIGHT_ARROW)) { keysPressed.push("right"); }
         if (keyIsDown(UP_ARROW)) { keysPressed.push("up"); }
 
+        if (winner == "none") {
+            player_car.step(keysPressed);
+        }
+
         player_car.render();
-        player_car.step(keysPressed);
-
         AI_car.render();
-        // AI_car.step(keysPressed);
-        // console.log(AI_car.observe());
 
-        // console.log("Observation: " + AI_car.observe());
-        
         var AI_X = Math.floor(AI_car.xPos / 2);
         var AI_Y = Math.floor(AI_car.yPos / 2);
         var AI_groundOn = board[AI_X][AI_Y];
         if (AI_groundOn == GRASS_CODE) {
             AI_crash = true;
-            fill(255,0,0);
-            ellipse(90,90,90,90);
+            fill(255, 0, 0);
+            ellipse(90, 90, 90, 90);
+            clearInterval(predInterval); // stop AI driving;
+        } else if (AI_car.xPos > windowWidth - 40 && AI_car.yPos < 40) {
+            // WIN
+            AI_crash = true;
+            fill(0,0,0);
+            textSize(64);
+            if (winner == "none") {
+                text('AI WIN', windowWidth / 2 - 64, windowHeight / 2 - 64);
+                winner = "human";
+            }
             clearInterval(predInterval); // stop AI driving;
         }
 
@@ -306,7 +309,14 @@ function draw() {
             resetRoad();
         } else if (player_car.xPos > windowWidth - 40 && player_car.yPos < 40) {
             // WIN
-            resetRoad();
+            AI_crash = true;
+            fill(0,0,0);
+            textSize(64);
+            if (winner == "none") {
+                text('HUMAN WIN', windowWidth / 2 - 64, windowHeight / 2 - 64);
+                winner = "human";
+            }
+            clearInterval(predInterval); // stop AI driving;
         }
     }
 }

@@ -41,11 +41,12 @@ def main():
     obs = sim.reset()
 
     while not done:
+        pygame.event.get()
         actions = np.array(net.activate(obs))
         def actuate(a): return a >= 0.5
-        obs, reward, done, info = sim.step(actuate(actions))
-        # print("Action:", actuate(actions))
-        # sim.render()
+        action = actuate(actions)
+        obs, reward, done, info = sim.step(action)
+        sim.render()
     print("Reward:", reward)
 
 if __name__ == "__main__":

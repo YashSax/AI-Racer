@@ -48,10 +48,10 @@ class Car:
         else:
             raise ValueError("Inappropriate USER argument, must be either \"HUMAN\" or \"AI\"")
         
-        self.INCREMENT_GRANULARITY = 2 # accuracy of observations - higher = faster but less accurate
+        self.INCREMENT_GRANULARITY = 1 # accuracy of observations - higher = faster but less accurate
         self.timestep = 0
         self.stallingFor = 0 # number of timesteps where no actions have occured   
-        self.stallsUntilDone = 2500 # number of timesteps stalled causes sim to end
+        self.stallsUntilDone = 10000 # number of timesteps stalled causes sim to end
 
     def rotate(self, left=False, right=False):
         if left:
@@ -162,6 +162,8 @@ class Car:
         return False
     
     def observe(self, visualizeObservations=False):
+        adjusted_X, adjusted_Y = self.x + self.CENTER_OFFSET, self.y + self.CENTER_OFFSET
+        adjustedPos = (adjusted_X, adjusted_Y)
         def getDistanceByIncrement(pos, increment):
             adjustedIncrement = tuple([self.INCREMENT_GRANULARITY * i for i in increment])
             currPos = pos
@@ -173,18 +175,18 @@ class Car:
         
         straightXIncrement = -1*math.sin(math.radians(self.angle))
         straightYIncrement = -1*math.cos(math.radians(self.angle))
-        straightDistance = getDistanceByIncrement((self.x, self.y), (straightXIncrement, straightYIncrement))
-        rightDistance = getDistanceByIncrement((self.x, self.y), (-1 * straightYIncrement, straightXIncrement))
-        leftDistance = getDistanceByIncrement((self.x, self.y), (straightYIncrement, -1 * straightXIncrement))
+        straightDistance = getDistanceByIncrement(adjustedPos, (straightXIncrement, straightYIncrement))
+        rightDistance = getDistanceByIncrement(adjustedPos, (-1 * straightYIncrement, straightXIncrement))
+        leftDistance = getDistanceByIncrement(adjustedPos, (straightYIncrement, -1 * straightXIncrement))
         sqrt2by2 = math.sqrt(2) / 2
         rightDiagonalIncrement = (sqrt2by2 * (straightXIncrement - straightYIncrement), sqrt2by2 * (straightXIncrement + straightYIncrement))
-        rightDiagonalDistance = getDistanceByIncrement((self.x, self.y), rightDiagonalIncrement)
+        rightDiagonalDistance = getDistanceByIncrement(adjustedPos, rightDiagonalIncrement)
         leftDiagonalIncrement = (sqrt2by2 * (straightXIncrement + straightYIncrement), -1 * sqrt2by2 * (straightXIncrement - straightYIncrement))
-        leftDiagonalDistance = getDistanceByIncrement((self.x, self.y), leftDiagonalIncrement)
+        leftDiagonalDistance = getDistanceByIncrement(adjustedPos, leftDiagonalIncrement)
         obs = [straightDistance, leftDistance, rightDistance, leftDiagonalDistance, rightDiagonalDistance]
-        
         self.obs = np.array(obs)
         if visualizeObservations:
+            pygame.draw.circle(self.SCREEN, (200, 200, 200), adjustedPos, 3)
             for waypoint in self.waypoints:
                 adjusted_waypoint = (self.BLOCK_SIZE * waypoint[0], self.BLOCK_SIZE * waypoint[1])
                 pygame.draw.circle(self.SCREEN, (0, 0, 200), adjusted_waypoint, 3)
