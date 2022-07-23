@@ -10,6 +10,7 @@ let AI_car;
 let INCREMENT_GRANULARITY = 1;
 let AI_crash = false;
 let winner = "none"
+let timer = 3;
 
 const predInterval = setInterval(function () {
     if (AI_crash || !showRoad) {
@@ -39,7 +40,7 @@ const predInterval = setInterval(function () {
                 predictedAction.push("up");
             }
             console.log(predictedAction)
-            if (winner == "none") {
+            if (winner == "none" && showRoad && timer < 0) {
                 AI_car.step(predictedAction);
             }
         },
@@ -250,7 +251,18 @@ function resetRoad() {
 }
 
 function draw() {
-    if (showRoad) {
+    if (showRoad && timer >= 0) {
+        textSize(64);
+        fill(0,0,0);
+        text(timer, 300, 300);
+        if (frameCount % 60 == 0) {
+            fill(255,0,0);
+            // fill(156, 175, 136);
+            ellipse(320, 270, 100, 100);
+            timer--;
+        }
+    }
+    if (showRoad && timer == 0) {
         fill(156, 175, 136);
         ellipse(player_car.xPos, player_car.yPos, 40, 40);
         ellipse(AI_car.xPos, AI_car.yPos, 40, 40);
