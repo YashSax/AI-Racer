@@ -48,7 +48,7 @@ def main():
         keys = pygame.key.get_pressed()
         valid_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP]
         actions = [key for key in valid_keys if keys[key]]
-        observation, reward, done, info = env.step(actions, visualizeObservations=True)
+        observation, reward, done, info = env.step(actions, visualizeObservations=False)
         # print("Current Waypoint", env.car.currWaypoint)
         env.render()
     print("Score:", reward)

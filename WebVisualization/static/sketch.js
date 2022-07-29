@@ -1,3 +1,15 @@
+/* 
+TODO list:
+Make it possible to do another race without having to reload the page
+Make the car sprites better
+Make a stoplight for the starting timer (red, yellow, green) instead of the jank number timer
+Create a more aesthetic way to show the result of the round
+Make a tutorial
+Make the car not be able to drive off the map, cap at the sides
+Train AI on multiple maps
+(Optional) Outline the track
+*/
+
 var ROAD_CODE = 1;
 var GRASS_CODE = 0;
 var board;
@@ -40,7 +52,7 @@ const predInterval = setInterval(function () {
                 predictedAction.push("up");
             }
             console.log(predictedAction)
-            if (winner == "none" && showRoad && timer < 0) {
+            if (winner == "none" && showRoad && timer <= 0) {
                 AI_car.step(predictedAction);
             }
         },
@@ -208,7 +220,7 @@ function setup() {
     saveBoardButton.position(0, 0);
     saveBoardButton.mousePressed(saveBoard);
     player_car = new Car(20, windowHeight - 20, 2, 2, true, windowWidth, windowHeight);
-    AI_car = new Car(40, windowHeight - 20, 3, 3, false, windowWidth, windowHeight);
+    AI_car = new Car(40, windowHeight - 20, 3, 5, false, windowWidth, windowHeight);
     frameRate(60);
 }
 
@@ -254,15 +266,17 @@ function draw() {
     if (showRoad && timer >= 0) {
         textSize(64);
         fill(0,0,0);
-        text(timer, 300, 300);
+        text(timer, 100, 100);
         if (frameCount % 60 == 0) {
-            fill(255,0,0);
-            // fill(156, 175, 136);
-            ellipse(320, 270, 100, 100);
+            // fill(255,0,0);
+            fill(156, 175, 136);
+            ellipse(120, 70, 100, 100);
             timer--;
         }
+        AI_car.render();
+        player_car.render();
     }
-    if (showRoad && timer == 0) {
+    if (showRoad && timer <= 0) {
         fill(156, 175, 136);
         ellipse(player_car.xPos, player_car.yPos, 40, 40);
         ellipse(AI_car.xPos, AI_car.yPos, 40, 40);
@@ -289,18 +303,16 @@ function draw() {
             player_car.step(keysPressed);
         }
 
-        player_car.render();
         AI_car.render();
+        player_car.render();
 
         var AI_X = Math.floor(AI_car.xPos / 2);
         var AI_Y = Math.floor(AI_car.yPos / 2);
         var AI_groundOn = board[AI_X][AI_Y];
         if (AI_groundOn == GRASS_CODE) {
             AI_crash = true;
-            fill(255, 0, 0);
-            ellipse(90, 90, 90, 90);
             clearInterval(predInterval); // stop AI driving;
-        } else if (AI_car.xPos > windowWidth - 40 && AI_car.yPos < 40) {
+        } else if (AI_car.xPos > windowWidth - 100 && AI_car.yPos < 100) {
             // WIN
             AI_crash = true;
             fill(0,0,0);
@@ -319,7 +331,7 @@ function draw() {
         if (groundOn == GRASS_CODE) {
             // LOSE
             resetRoad();
-        } else if (player_car.xPos > windowWidth - 40 && player_car.yPos < 40) {
+        } else if (player_car.xPos > windowWidth - 100 && player_car.yPos < 100) {
             // WIN
             AI_crash = true;
             fill(0,0,0);
