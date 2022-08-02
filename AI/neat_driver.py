@@ -20,16 +20,14 @@ GAME_DIM = (1250, 630)
 START_POS = (20, GAME_DIM[0] - 30)
 BLOCK_SIZE = 2
 
-map_names = ["tightCorner", "normal", "forks", "blocks", "loop"]
-boards, waypoints_list, bgs = [], [], []
+map = "sharpTurns"
 
-for map in map_names:
-    boards.append(np.load(f"./AI/boards/{map}/{map}_board.npy"))
-    waypoints_list.append(np.load(f"./AI/boards/{map}/{map}_waypoints.npy"))
-    bgs.append(pygame.image.load(f"./AI/boards/{map}/{map}.jpeg"))
+board = np.load(f"./AI/boards/{map}/{map}_board.npy")
+waypoints = np.load(f"./AI/boards/{map}/{map}_waypoints.npy")
+bg = pygame.image.load(f"./AI/boards/{map}/{map}.jpeg")
 
 runs_per_net = 1
-generations = 100
+generations = 20
 
 def eval_board(net, board, waypoints, bg):
     c = Car(0.4, 0.4, START_POS, board, waypoints, bg, BLOCK_SIZE, GAME_DIM, user="AI")
@@ -49,9 +47,7 @@ def eval_genome(genome, config):
     fitnesses = []
 
     for runs in range(runs_per_net):
-        total_reward = 0
-        for board, waypoints, bg in zip(boards, waypoints_list, bgs):
-            total_reward += eval_board(net, board, waypoints, bg)
+        total_reward = eval_board(net, board, waypoints, bg)
         fitnesses.append(total_reward)
     return min(fitnesses)
 

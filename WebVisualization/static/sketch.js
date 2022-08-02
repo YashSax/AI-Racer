@@ -312,7 +312,7 @@ function draw() {
         if (AI_groundOn == GRASS_CODE) {
             AI_crash = true;
             clearInterval(predInterval); // stop AI driving;
-        } else if (AI_car.xPos > windowWidth - 100 && AI_car.yPos < 100) {
+        } else if (AI_car.xPos > windowWidth - 50 && AI_car.yPos < 50) {
             // WIN
             AI_crash = true;
             fill(0,0,0);
@@ -331,7 +331,7 @@ function draw() {
         if (groundOn == GRASS_CODE) {
             // LOSE
             resetRoad();
-        } else if (player_car.xPos > windowWidth - 100 && player_car.yPos < 100) {
+        } else if (player_car.xPos > windowWidth - 50 && player_car.yPos < 50) {
             // WIN
             AI_crash = true;
             fill(0,0,0);
