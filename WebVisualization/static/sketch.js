@@ -1,13 +1,14 @@
 /* 
 TODO list:
 Make it possible to do another race without having to reload the page
-Make the car sprites better
-Make a stoplight for the starting timer (red, yellow, green) instead of the jank number timer
-Create a more aesthetic way to show the result of the round
 Make a tutorial
-Make the car not be able to drive off the map, cap at the sides
 Train AI on multiple maps
 (Optional) Outline the track
+
+style buttons
+make people able to get a track code, stopwatch?
+
+for starting, have 3 dots that disappear for each second
 */
 
 var ROAD_CODE = 1;
@@ -24,7 +25,20 @@ let AI_crash = false;
 let winner = "none"
 let timer = 3;
 
-const predInterval = setInterval(function () {
+let loseImg;
+let winImg;
+let humanCarImg;
+let AICarImg;
+
+// 10, 10, Math.round(810 / 4), Math.round(390 / 4)
+let startButtonX = 10;
+let startButtonY = 10;
+let startButtonWidth = Math.round(810 / 4);
+let startButtonHeight = Math.round(390 / 4);
+
+let invalidRoadBuffer = 30;
+
+function pred() {
     if (AI_crash || !showRoad) {
         return;
     }
@@ -51,7 +65,6 @@ const predInterval = setInterval(function () {
             if (third == "True") {
                 predictedAction.push("up");
             }
-            console.log(predictedAction)
             if (winner == "none" && showRoad && timer <= 0) {
                 AI_car.step(predictedAction);
             }
@@ -60,7 +73,9 @@ const predInterval = setInterval(function () {
             console.log("Error" + JSON.stringify(xhr));
         }
     });
-}, 25);;
+}
+
+var predInterval = setInterval(pred, 25);
 
 function createArray(length) {
     var arr = new Array(length || 0),
@@ -101,10 +116,10 @@ class Car {
         this.xPos += horizontal;
         this.yPos -= vertical;
 
-        this.xPos = Math.max(0, this.xPos);
-        this.xPos = Math.min(this.xPos, CANVAS_X);
-        this.yPos = Math.max(0, this.yPos);
-        this.yPos = Math.min(this.yPos, CANVAS_Y);
+        this.xPos = Math.max(10, this.xPos);
+        this.xPos = Math.min(this.xPos, CANVAS_X - 10);
+        this.yPos = Math.max(13, this.yPos);
+        this.yPos = Math.min(this.yPos, CANVAS_Y - 13);
     }
 
     slow_down() {
@@ -143,10 +158,18 @@ class Car {
         push();
         strokeWeight(1);
         angleMode(DEGREES);
-        rectMode(CENTER);
+        imageMode(CENTER);
         translate(this.xPos, this.yPos);
         rotate(this.theta);
-        rect(0, 0, 13, 20);
+        if (this.is_human) {
+            image(humanCarImg, 0, 0);
+        } else {
+            image(AICarImg, 0, 0);
+        }
+        // rectMode(CENTER);
+        // translate(this.xPos, this.yPos);
+        // rotate(this.theta);
+        // rect(0, 0, 13, 20);
         pop();
     }
 
@@ -198,10 +221,23 @@ class Car {
 
         // // NOTE: removed board
         // let obs = {"angle":Math.round(this.theta), "x":Math.round(this.xPos), "y":Math.round(this.yPos)}
-        console.log("Observation: " + JSON.stringify(obs));
         return obs;
     }
 }
+
+function preload() {
+    startButtonImg = loadImage("https://i.ibb.co/279BscN/start-Button.png");
+    loseImg = loadImage("https://i.ibb.co/mTjdm7X/you-lose.jpg");
+    winImg = loadImage("https://i.ibb.co/Th4HNkV/you-win.jpg");
+    humanCarImg = loadImage("https://i.ibb.co/2gcjkqH/car.png");
+    AICarImg = loadImage("https://i.ibb.co/QbBJqNm/player-car.png");
+
+    // traffic light
+    green = loadImage("https://i.ibb.co/fdkV3Zx/green.png");
+    red1 = loadImage("https://i.ibb.co/xSkXqkB/red1.png");
+    red2 = loadImage("https://i.ibb.co/5r27cpq/red2.png");
+}
+var vid;
 
 function setup() {
     CANVAS_X = windowWidth
@@ -216,22 +252,49 @@ function setup() {
         }
     }
     background(156, 175, 136); // Grass
-    saveBoardButton = createButton("Start the Race!");
-    saveBoardButton.position(0, 0);
-    saveBoardButton.mousePressed(saveBoard);
+
     player_car = new Car(20, windowHeight - 20, 2, 2, true, windowWidth, windowHeight);
     AI_car = new Car(40, windowHeight - 20, 3, 5, false, windowWidth, windowHeight);
+    
     frameRate(60);
+    image(startButtonImg, startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    
+    let startPoint = [20, windowHeight - 20];
+    let finishPoint = [windowWidth - 20, 20];
+    roadPoints.push(startPoint);
+    roadPoints.push(finishPoint);
+    strokeWeight(0);
+    fill(0,0,0);
+    ellipse(startPoint[0], startPoint[1], 82, 82);
+    ellipse(finishPoint[0], finishPoint[1], 82, 82);
+    fill(105, 105, 105);
+    ellipse(startPoint[0], startPoint[1], 80, 80);
+    ellipse(finishPoint[0], finishPoint[1], 80, 80);
 }
 
 function mouseDragged() {
+    if (mouseX >= startButtonX - invalidRoadBuffer && mouseX <= startButtonX + startButtonWidth + invalidRoadBuffer &&
+        mouseY >= startButtonY - invalidRoadBuffer && mouseY <= startButtonY + startButtonHeight + invalidRoadBuffer) {
+        return;
+    }
     if (!showRoad) {
         strokeWeight(0);
         colorNear();
-        fill(105, 105, 105); // ROAD
-        ellipse(mouseX, mouseY, 80, 80);
+        // fill(105, 105, 105); // ROAD
+        // ellipse(mouseX, mouseY, 80, 80);
         const loc = [mouseX, mouseY];
         roadPoints.push(loc);
+        
+        roadPoints.forEach((x) => {
+            fill(0, 0, 0);
+            ellipse(x[0], x[1], 82, 82);
+        });
+
+        roadPoints.forEach((x) => {
+            fill(105, 105, 105);
+            ellipse(x[0], x[1], 80, 80);
+        })
+
     }
 }
 // TODO: try making a small green circle around car than putting the grey circles
@@ -256,43 +319,105 @@ function saveBoard() {
 function resetRoad() {
     player_car.reset();
     background(156, 175, 136);
+
+    // background
+    fill(0, 0, 0);
+    roadPoints.forEach(point => {
+        ellipse(point[0], point[1], 82, 82);
+    });
+
+    //road
     fill(105, 105, 105);
     roadPoints.forEach(point => {
         ellipse(point[0], point[1], 80, 80);
     });
 }
+function drawTrafficLight(x, y, color) {
+    // if (color == "green") {
+    //     image(green, x + 50, y + 50);
+    // } else if (color == "yellow") {
+    //     image(red2, x + 50, y + 50);
+    // } else if (color == "red") {
+    //     image(red1, x + 50, y + 50);
+    // }
+    fill(0,0,0);
+    rect(x, y, 100, 200, 20);
+    if (color == "green") {
+        fill(0, 255, 0);
+        ellipse(x + 50, Math.round(y + 50), 50, 50);
+    } else if (color == "yellow") {
+        fill(255, 255, 0);
+        ellipse(x + 50, Math.round(y + 100), 50, 50);
+    } else {
+        fill(255, 0, 0);
+        ellipse(x + 50, Math.round(y + 4 * 200 / 5), 50, 50);
+    }
+}
+
+function mouseClicked() {
+    if (mouseX >= startButtonX && mouseX <= startButtonX + startButtonWidth &&
+        mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight) {
+        saveBoard();
+    }
+}
 
 function draw() {
+    drawTrafficLight(windowWidth - 140, windowHeight - 230, "red");
     if (showRoad && timer >= 0) {
         textSize(64);
         fill(0,0,0);
-        text(timer, 100, 100);
+        if (timer == 3) {
+            drawTrafficLight(windowWidth - 140, windowHeight - 230, "red");
+        } else if (timer == 2) {
+            drawTrafficLight(windowWidth - 140, windowHeight - 230, "yellow");
+        } else {
+            drawTrafficLight(windowWidth - 140, windowHeight - 230, "green");
+        }
         if (frameCount % 60 == 0) {
-            // fill(255,0,0);
-            fill(156, 175, 136);
-            ellipse(120, 70, 100, 100);
             timer--;
         }
         AI_car.render();
         player_car.render();
     }
     if (showRoad && timer <= 0) {
+        drawTrafficLight(windowWidth - 140, windowHeight - 230, "green");
         fill(156, 175, 136);
         ellipse(player_car.xPos, player_car.yPos, 40, 40);
         ellipse(AI_car.xPos, AI_car.yPos, 40, 40);
-        fill(105, 105, 105);
+
+        // filling in the car in the previous frame
+        // filling in the base ellipses for the road outline:
+        fill(0, 0, 0);
         roadPoints.forEach(point => {
             // update player road
             var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
-            if (dist <= 80) {
+            // distance for the background must be less to avoid outlines
+            if (dist <= 55) {
+                ellipse(point[0], point[1], 82, 82);
+            }
+            // update AI road
+            var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
+            if (dist <= 55) {
+                ellipse(point[0], point[1], 82, 82);
+            }
+        });
+        // drawing the actual road:
+        fill(105, 105, 105);
+        strokeWeight(0);
+        roadPoints.forEach(point => {
+            // update player road
+            var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
+            if (dist <= 90) {
                 ellipse(point[0], point[1], 80, 80);
             }
             // update AI road
             var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
-            if (dist <= 80) {
+            if (dist <= 90) {
                 ellipse(point[0], point[1], 80, 80);
             }
         });
+
+
 
         const keysPressed = [];
         if (keyIsDown(LEFT_ARROW)) { keysPressed.push("left"); }
@@ -318,7 +443,9 @@ function draw() {
             fill(0,0,0);
             textSize(64);
             if (winner == "none") {
-                text('AI WIN', windowWidth / 2 - 64, windowHeight / 2 - 64);
+                // AI WIN  
+                imageMode(CENTER);
+                image(loseImg, Math.round(windowWidth / 2), 100);
                 winner = "human";
             }
             clearInterval(predInterval); // stop AI driving;
@@ -337,7 +464,9 @@ function draw() {
             fill(0,0,0);
             textSize(64);
             if (winner == "none") {
-                text('HUMAN WIN', windowWidth / 2 - 64, windowHeight / 2 - 64);
+                // HUMAN WIN
+                imageMode(CENTER);
+                image(winImg, Math.round(windowWidth / 2), 100);
                 winner = "human";
             }
             clearInterval(predInterval); // stop AI driving;
