@@ -17,6 +17,7 @@ var board;
 var saveBoardButton;
 var boardBackground;
 const roadPoints = [];
+const yellowPoints = [];
 var showRoad = false;
 let player_car;
 let AI_car;
@@ -257,20 +258,28 @@ function setup() {
     AI_car = new Car(40, windowHeight - 20, 3, 5, false, windowWidth, windowHeight);
     
     frameRate(60);
-    image(startButtonImg, startButtonX, startButtonY, startButtonWidth, startButtonHeight);
     
     let startPoint = [20, windowHeight - 20];
     let finishPoint = [windowWidth - 20, 20];
     roadPoints.push(startPoint);
     roadPoints.push(finishPoint);
+    colorNear(startPoint[0], startPoint[1]);
+    colorNear(finishPoint[0], finishPoint[1]);
     strokeWeight(0);
     fill(0,0,0);
     ellipse(startPoint[0], startPoint[1], 82, 82);
     ellipse(finishPoint[0], finishPoint[1], 82, 82);
+
     fill(105, 105, 105);
     ellipse(startPoint[0], startPoint[1], 80, 80);
     ellipse(finishPoint[0], finishPoint[1], 80, 80);
+
+    image(startButtonImg, startButtonX, startButtonY, startButtonWidth, startButtonHeight);
 }
+
+let counter = 0;
+let yellowLineRange = 1;
+let currYellowLine = [[0, 0], [0, 0]];
 
 function mouseDragged() {
     if (mouseX >= startButtonX - invalidRoadBuffer && mouseX <= startButtonX + startButtonWidth + invalidRoadBuffer &&
@@ -278,29 +287,58 @@ function mouseDragged() {
         return;
     }
     if (!showRoad) {
+        counter++;
         strokeWeight(0);
-        colorNear();
         // fill(105, 105, 105); // ROAD
         // ellipse(mouseX, mouseY, 80, 80);
         const loc = [mouseX, mouseY];
+
         roadPoints.push(loc);
-        
-        roadPoints.forEach((x) => {
-            fill(0, 0, 0);
-            ellipse(x[0], x[1], 82, 82);
+        // TODO: optimize this so that it only draw the background of the near circles
+        fill(0, 0, 0);
+        roadPoints.forEach(point => {
+            var dist = Math.sqrt(Math.pow(mouseX - point[0], 2) + Math.pow(mouseY - point[1], 2));
+            if (dist <= 70) {
+                ellipse(point[0], point[1], 82, 82);
+            }
         });
 
-        roadPoints.forEach((x) => {
-            fill(105, 105, 105);
-            ellipse(x[0], x[1], 80, 80);
-        })
+        fill(105, 105, 105);
+        roadPoints.forEach(point => {
+            var dist = Math.sqrt(Math.pow(mouseX - point[0], 2) + Math.pow(mouseY - point[1], 2));
+            if (dist <= 150) {
+                ellipse(point[0], point[1], 80, 80);
+            }
+        });
+        
+        if (counter == 5 - yellowLineRange) {
+            currYellowLine[0] = loc;
+        } else if (counter == 5 + yellowLineRange) {
+            currYellowLine[1] = loc;
+            yellowPoints.push(currYellowLine);
+            currYellowLine = [[0, 0], [0, 0]];
+        } else if (counter > 5) {
+            counter = 0;
+        }
 
+        stroke(255, 255, 0);
+        strokeWeight(3);
+        yellowPoints.forEach(pair => {
+            line(pair[0][0], pair[0][1], pair[1][0], pair[1][1]);
+        });
+        strokeWeight(0);
+        stroke(0,0,0);
     }
 }
+
+function mouseReleased() {
+    counter = 0;
+}
+
 // TODO: try making a small green circle around car than putting the grey circles
-function colorNear() {
-    var xPos = Math.floor(mouseX / 2);
-    var yPos = Math.floor(mouseY / 2);
+function colorNear(x ,y) {
+    var xPos = Math.floor(x / 2);
+    var yPos = Math.floor(y / 2);
     for (let i = xPos - 80; i < xPos + 80; i++) {
         for (let j = yPos - 80; j < yPos + 80; j++) {
             if (i > 0 && i < board.length && j > 0 && j < board[0].length) {
@@ -356,8 +394,34 @@ function drawTrafficLight(x, y, color) {
 
 function mouseClicked() {
     if (mouseX >= startButtonX && mouseX <= startButtonX + startButtonWidth &&
-        mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight) {
+        mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight && !showRoad) {
         saveBoard();
+        fill(156, 175, 136);
+        roadPoints.forEach((x) => {
+            ellipse(x[0], x[1], 83, 83);
+        });
+
+        for (let i = 0; i < 5; i++) {
+            smoothen();
+        }
+
+        fill(0, 0, 0);
+        roadPoints.forEach((x) => {
+            ellipse(x[0], x[1], 82, 82);
+            colorNear(x[0], x[1]);
+        });
+        fill(105, 105, 105);
+        roadPoints.forEach((x) => {
+            ellipse(x[0], x[1], 80, 80);
+        });
+
+        stroke(255, 255, 0);
+        strokeWeight(3);
+        yellowPoints.forEach(pair => {
+            line(pair[0][0], pair[0][1], pair[1][0], pair[1][1]);
+        });
+        strokeWeight(0);
+        stroke(0, 0, 0);
     }
 }
 
@@ -381,7 +445,7 @@ function draw() {
     }
     if (showRoad && timer <= 0) {
         drawTrafficLight(windowWidth - 140, windowHeight - 230, "green");
-        fill(156, 175, 136);
+        fill(156, 175, 136); // grass
         ellipse(player_car.xPos, player_car.yPos, 40, 40);
         ellipse(AI_car.xPos, AI_car.yPos, 40, 40);
 
@@ -392,12 +456,12 @@ function draw() {
             // update player road
             var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
             // distance for the background must be less to avoid outlines
-            if (dist <= 55) {
+            if (dist <= 90) {
                 ellipse(point[0], point[1], 82, 82);
             }
             // update AI road
             var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
-            if (dist <= 55) {
+            if (dist <= 90) {
                 ellipse(point[0], point[1], 82, 82);
             }
         });
@@ -407,17 +471,23 @@ function draw() {
         roadPoints.forEach(point => {
             // update player road
             var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
-            if (dist <= 90) {
+            if (dist <= 150) {
                 ellipse(point[0], point[1], 80, 80);
             }
             // update AI road
             var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
-            if (dist <= 90) {
+            if (dist <= 150) {
                 ellipse(point[0], point[1], 80, 80);
             }
         });
 
-
+        stroke(255, 255, 0);
+        strokeWeight(3);
+        yellowPoints.forEach(pair => {
+            line(pair[0][0], pair[0][1], pair[1][0], pair[1][1]);
+        });
+        strokeWeight(0);
+        stroke(0, 0, 0);
 
         const keysPressed = [];
         if (keyIsDown(LEFT_ARROW)) { keysPressed.push("left"); }
@@ -445,7 +515,6 @@ function draw() {
             if (winner == "none") {
                 // AI WIN  
                 imageMode(CENTER);
-                image(loseImg, Math.round(windowWidth / 2), 100);
                 winner = "human";
             }
             clearInterval(predInterval); // stop AI driving;
@@ -466,10 +535,23 @@ function draw() {
             if (winner == "none") {
                 // HUMAN WIN
                 imageMode(CENTER);
-                image(winImg, Math.round(windowWidth / 2), 100);
                 winner = "human";
             }
             clearInterval(predInterval); // stop AI driving;
         }
+    }
+}
+
+function smoothen() {
+    for (var i = 3; i < roadPoints.length - 1; i++) {
+        b = [roadPoints[i + 1][0] - roadPoints[i - 1][0], roadPoints[i + 1][1] - roadPoints[i - 1][1]];
+        a = [roadPoints[i][0] - roadPoints[i - 1][0], roadPoints[i][1] - roadPoints[i - 1][1]];
+
+        ab = b[0]*a[0] + b[1]*a[1];
+        bb = b[0]*b[0] + b[1]*b[1];
+        stretchFactor = ab / bb;
+        
+        roadPoints[i][0] = stretchFactor * b[0] + roadPoints[i - 1][0];
+        roadPoints[i][1] = stretchFactor * b[1] + roadPoints[i - 1][1];
     }
 }
