@@ -20,11 +20,11 @@ GAME_DIM = (1250, 630)
 START_POS = (20, GAME_DIM[0] - 30)
 BLOCK_SIZE = 2
 
-map = "sharpTurns"
+maps = ["all", "tightCorner", "normal"]
 
-board = np.load(f"./AI/boards/{map}/{map}_board.npy")
-waypoints = np.load(f"./AI/boards/{map}/{map}_waypoints.npy")
-bg = pygame.image.load(f"./AI/boards/{map}/{map}.jpeg")
+boards = [np.load(f"./AI/boards/{map}/{map}_board.npy") for map in maps]
+waypoints_list = [np.load(f"./AI/boards/{map}/{map}_waypoints.npy") for map in maps]
+bgs = [pygame.image.load(f"./AI/boards/{map}/{map}.jpeg") for map in maps]
 
 runs_per_net = 1
 generations = 20
@@ -46,8 +46,10 @@ def eval_genome(genome, config):
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     fitnesses = []
 
+    total_reward = 0
     for runs in range(runs_per_net):
-        total_reward = eval_board(net, board, waypoints, bg)
+        for board, waypoints, bg in zip(boards, waypoints_list, bgs):
+            total_reward += eval_board(net, board, waypoints, bg)
         fitnesses.append(total_reward)
     return min(fitnesses)
 

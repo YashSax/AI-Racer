@@ -1,14 +1,18 @@
 /* 
 TODO list:
+Make car start facing next waypoint (so that you always start going straight)
+end screen (win/lose)
+Make it clear that blue = you, orange = AI
+
+Web:
 Make it possible to do another race without having to reload the page
 Make a tutorial
+
+AI:
 Train AI on multiple maps
-(Optional) Outline the track
 
-style buttons
-make people able to get a track code, stopwatch?
-
-for starting, have 3 dots that disappear for each second
+If you've already hit RESET or you haven't hit start yet, make the reset button into a clear button
+that gets rid of all the current roads
 */
 
 var ROAD_CODE = 1;
@@ -24,7 +28,7 @@ let AI_car;
 let INCREMENT_GRANULARITY = 1;
 let AI_crash = false;
 let winner = "none"
-let timer = 3;
+let timer = 4;
 
 let loseImg;
 let winImg;
@@ -37,13 +41,25 @@ let startButtonY = 10;
 let startButtonWidth = Math.round(810 / 4);
 let startButtonHeight = Math.round(390 / 4);
 
+let visButtonX;
+let visButtonY = startButtonY;
+let visButtonWidth = 300;
+let visButtonHeight = startButtonHeight;
+
+let startPoint;
+let finishPoint;
+
 let invalidRoadBuffer = 30;
+let distanceTraveled = 0;
+let observation;
+
+let visPoints = [];
 
 function pred() {
     if (AI_crash || !showRoad) {
         return;
     }
-    let observation = AI_car.observe();
+    observation = AI_car.observe();
     $.post("/postmethod", {
         javascript_data: observation
     });
@@ -199,10 +215,15 @@ class Car {
             currPos[0][0] = currPos[0][0] - adjustedIncrement[0];
             currPos[0][1] = currPos[0][1] + adjustedIncrement[1];
         }
+
+        visPoints.push(currPos[0]);
+
         return Math.round(this.distance(pos, currPos[0]) / 2);
     }
 
     observe() {
+        visPoints = [];
+        fill(255, 255, 0);
         var straightXIncrement = -1 * Math.sin(radians(this.theta));
         var straightYIncrement = -1 * Math.cos(radians(this.theta));
         var straightDistance = this.getDistanceByIncrement([this.xPos, this.yPos], [straightXIncrement, straightYIncrement]);
@@ -220,26 +241,30 @@ class Car {
         var offset = 0
         let obs = { "s": straightDistance + offset, "l": leftDistance + offset, "r": rightDistance + offset, "ld": leftDiagonalDistance + offset, "rd": rightDiagonalDistance + offset };
 
-        // // NOTE: removed board
-        // let obs = {"angle":Math.round(this.theta), "x":Math.round(this.xPos), "y":Math.round(this.yPos)}
         return obs;
     }
 }
 
 function preload() {
-    startButtonImg = loadImage("https://i.ibb.co/279BscN/start-Button.png");
+    startButtonImg = loadImage("https://i.ibb.co/88ZbxZ9/newstart-Button.png") // New V1: "https://i.ibb.co/GFvXhGq/start-Button.png")//Old: "https://i.ibb.co/279BscN/start-Button.png");
+    resetButtonImg = loadImage("https://i.ibb.co/ZWjWB8h/reset-Button.png");
+    visualizeImg = loadImage("https://i.ibb.co/7CWgXGY/visualize.png");
+
     loseImg = loadImage("https://i.ibb.co/mTjdm7X/you-lose.jpg");
     winImg = loadImage("https://i.ibb.co/Th4HNkV/you-win.jpg");
     humanCarImg = loadImage("https://i.ibb.co/2gcjkqH/car.png");
     AICarImg = loadImage("https://i.ibb.co/QbBJqNm/player-car.png");
 
     // traffic light
-    green = loadImage("https://i.ibb.co/fdkV3Zx/green.png");
-    red1 = loadImage("https://i.ibb.co/xSkXqkB/red1.png");
-    red2 = loadImage("https://i.ibb.co/5r27cpq/red2.png");
-}
-var vid;
+    green_tl = loadImage("https://i.ibb.co/fdkV3Zx/green.png");
+    red1_tl = loadImage("https://i.ibb.co/xSkXqkB/red1.png");
+    red2_tl = loadImage("https://i.ibb.co/5r27cpq/red2.png");
 
+    // background
+    grassTexture = loadImage("https://i.ibb.co/vH5hw43/grass-Texture.jpg");
+}
+
+let visualize = false;
 function setup() {
     CANVAS_X = windowWidth
     CANVAS_Y = windowHeight
@@ -252,21 +277,22 @@ function setup() {
             board[i][j] = GRASS_CODE;
         }
     }
+
     background(156, 175, 136); // Grass
 
     player_car = new Car(20, windowHeight - 20, 2, 2, true, windowWidth, windowHeight);
     AI_car = new Car(40, windowHeight - 20, 3, 5, false, windowWidth, windowHeight);
-    
+
     frameRate(60);
-    
-    let startPoint = [20, windowHeight - 20];
-    let finishPoint = [windowWidth - 20, 20];
+
+    startPoint = [20, windowHeight - 20];
+    finishPoint = [windowWidth - 20, startButtonY * 2 + startButtonHeight + 20];
     roadPoints.push(startPoint);
     roadPoints.push(finishPoint);
     colorNear(startPoint[0], startPoint[1]);
     colorNear(finishPoint[0], finishPoint[1]);
     strokeWeight(0);
-    fill(0,0,0);
+    fill(0, 0, 0);
     ellipse(startPoint[0], startPoint[1], 82, 82);
     ellipse(finishPoint[0], finishPoint[1], 82, 82);
 
@@ -274,7 +300,45 @@ function setup() {
     ellipse(startPoint[0], startPoint[1], 80, 80);
     ellipse(finishPoint[0], finishPoint[1], 80, 80);
 
-    image(startButtonImg, startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    visButtonX = Math.round(2 / 3 * windowWidth) - 120
+}
+
+function resetScreen() {
+    background(156, 175, 136);
+    updateHeader();
+
+    fill(0, 0, 0);
+    roadPoints.forEach(point => {
+        ellipse(point[0], point[1], 82, 82);
+    });
+
+    fill(105, 105, 105);
+    roadPoints.forEach(point => {
+        ellipse(point[0], point[1], 80, 80);
+    });
+
+    stroke(255, 255, 0);
+    strokeWeight(3);
+    yellowPoints.forEach(pair => {
+        line(pair[0][0], pair[0][1], pair[1][0], pair[1][1]);
+    });
+    strokeWeight(0);
+    stroke(0, 0, 0);
+    if (winner == "none") {
+        clearInterval(predInterval);
+    }
+}
+
+function resetRace() {
+    resetRoad(true, true);
+    resetScreen();
+
+    AI_crash = false;
+    winner = "none";
+
+    predInterval = setInterval(pred, 25);
+    showRoad = false;
+    timer = 4;
 }
 
 let counter = 0;
@@ -289,12 +353,10 @@ function mouseDragged() {
     if (!showRoad) {
         counter++;
         strokeWeight(0);
-        // fill(105, 105, 105); // ROAD
-        // ellipse(mouseX, mouseY, 80, 80);
-        const loc = [mouseX, mouseY];
 
+        const loc = [mouseX, mouseY];
         roadPoints.push(loc);
-        // TODO: optimize this so that it only draw the background of the near circles
+
         fill(0, 0, 0);
         roadPoints.forEach(point => {
             var dist = Math.sqrt(Math.pow(mouseX - point[0], 2) + Math.pow(mouseY - point[1], 2));
@@ -310,7 +372,7 @@ function mouseDragged() {
                 ellipse(point[0], point[1], 80, 80);
             }
         });
-        
+
         if (counter == 5 - yellowLineRange) {
             currYellowLine[0] = loc;
         } else if (counter == 5 + yellowLineRange) {
@@ -327,7 +389,9 @@ function mouseDragged() {
             line(pair[0][0], pair[0][1], pair[1][0], pair[1][1]);
         });
         strokeWeight(0);
-        stroke(0,0,0);
+        stroke(0, 0, 0);
+
+        updateHeader();
     }
 }
 
@@ -336,7 +400,7 @@ function mouseReleased() {
 }
 
 // TODO: try making a small green circle around car than putting the grey circles
-function colorNear(x ,y) {
+function colorNear(x, y) {
     var xPos = Math.floor(x / 2);
     var yPos = Math.floor(y / 2);
     for (let i = xPos - 80; i < xPos + 80; i++) {
@@ -354,8 +418,13 @@ function saveBoard() {
     showRoad = true;
 }
 
-function resetRoad() {
-    player_car.reset();
+function resetRoad(resetPlayer, resetAI) {
+    if (resetPlayer) {
+        player_car.reset();
+    }
+    if (resetAI) {
+        AI_car.reset();
+    }
     background(156, 175, 136);
 
     // background
@@ -369,26 +438,71 @@ function resetRoad() {
     roadPoints.forEach(point => {
         ellipse(point[0], point[1], 80, 80);
     });
+
+    stroke(255, 255, 0);
+    strokeWeight(3);
+    yellowPoints.forEach(pair => {
+        line(pair[0][0], pair[0][1], pair[1][0], pair[1][1]);
+    });
+    strokeWeight(0);
+    stroke(0, 0, 0);
+
+    visPoints = [];
 }
-function drawTrafficLight(x, y, color) {
-    // if (color == "green") {
-    //     image(green, x + 50, y + 50);
-    // } else if (color == "yellow") {
-    //     image(red2, x + 50, y + 50);
-    // } else if (color == "red") {
-    //     image(red1, x + 50, y + 50);
-    // }
-    fill(0,0,0);
-    rect(x, y, 100, 200, 20);
-    if (color == "green") {
-        fill(0, 255, 0);
-        ellipse(x + 50, Math.round(y + 50), 50, 50);
-    } else if (color == "yellow") {
-        fill(255, 255, 0);
-        ellipse(x + 50, Math.round(y + 100), 50, 50);
-    } else {
+function drawTrafficLight(stage) {
+    let x = windowWidth - startButtonX - startButtonWidth - 10;
+    let y = startButtonY
+    fill(0, 0, 0);
+    rect(x, y, startButtonWidth, startButtonHeight, 20);
+    if (stage == 0) {
+        // grey background
+        fill(109, 109, 109, 125);
+        ellipse(x + 40, y + 50, 45, 45);
+        ellipse(x + 100, y + 50, 45, 45);
+        ellipse(x + 160, y + 50, 45, 45);
+        // no lights
+        return;
+    } else if (stage == 1) {
+        // grey background
+        fill(109, 109, 109, 125);
+        ellipse(x + 40, y + 50, 45, 45);
+        ellipse(x + 100, y + 50, 45, 45);
+        ellipse(x + 160, y + 50, 45, 45);
+        // one red
         fill(255, 0, 0);
-        ellipse(x + 50, Math.round(y + 4 * 200 / 5), 50, 50);
+        ellipse(x + 40, y + 50, 40, 40);
+    } else if (stage == 2) {
+        // grey background
+        fill(109, 109, 109, 125);
+        ellipse(x + 40, y + 50, 45, 45);
+        ellipse(x + 100, y + 50, 45, 45);
+        ellipse(x + 160, y + 50, 45, 45);
+        // two reds
+        fill(255, 0, 0);
+        ellipse(x + 40, y + 50, 40, 40);
+        ellipse(x + 100, y + 50, 40, 40);
+    } else if (stage == 3) {
+        // grey background
+        fill(109, 109, 109, 125);
+        ellipse(x + 40, y + 50, 45, 45);
+        ellipse(x + 100, y + 50, 45, 45);
+        ellipse(x + 160, y + 50, 45, 45);
+        // three reds
+        fill(255, 0, 0);
+        ellipse(x + 40, y + 50, 40, 40);
+        ellipse(x + 100, y + 50, 40, 40);
+        ellipse(x + 160, y + 50, 40, 40);
+    } else {
+        // grey background
+        fill(109, 109, 109, 125);
+        ellipse(x + 40, y + 50, 45, 45);
+        ellipse(x + 100, y + 50, 45, 45);
+        ellipse(x + 160, y + 50, 45, 45);
+        // green
+        fill(0, 255, 0);
+        ellipse(x + 40, y + 50, 40, 40);
+        ellipse(x + 100, y + 50, 40, 40);
+        ellipse(x + 160, y + 50, 40, 40);
     }
 }
 
@@ -396,15 +510,18 @@ function mouseClicked() {
     if (mouseX >= startButtonX && mouseX <= startButtonX + startButtonWidth &&
         mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight && !showRoad) {
         saveBoard();
+
+        // clear out current road
         fill(156, 175, 136);
         roadPoints.forEach((x) => {
             ellipse(x[0], x[1], 83, 83);
         });
 
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
             smoothen();
         }
 
+        // draw new, smoothened, road
         fill(0, 0, 0);
         roadPoints.forEach((x) => {
             ellipse(x[0], x[1], 82, 82);
@@ -422,46 +539,64 @@ function mouseClicked() {
         });
         strokeWeight(0);
         stroke(0, 0, 0);
+
+        // make cars face the correct way
+        let closestPoints = [...roadPoints]; // copy roadpoints
+        closestPoints.sort(closerToStart);
+
+        let angleSampleSize = Math.min(10, closestPoints.length);
+        let angleSum = 0;
+        let finalAngle = 180;
+        for (let i = 0; i < angleSampleSize; i++) {
+            angleSum += -1 * Math.atan2((closestPoints[i][1] - (windowHeight - 20)), (closestPoints[i][0] - 30));
+            // console.log(-1 * Math.atan2((closestPoints[i][1] - (windowHeight - 20)), (closestPoints[i][0] - 30)) * 180/Math.PI);
+        }
+        // console.log("Angle sum: " + angleSum * 180/Math.PI);
+        angleSum /= angleSampleSize;
+        finalAngle = 90 - 180 / Math.PI * angleSum;
+        // console.log("Final angle: " + finalAngle);
+
+        player_car.theta = finalAngle;
+        AI_car.theta = finalAngle;
+    } else if (mouseX >= startButtonX + startButtonWidth + 10 && mouseX <= startButtonX + 2 * startButtonWidth + 10 &&
+        mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight) {
+        resetRace();
+    } else if (mouseX >= visButtonX && mouseX <= visButtonX + visButtonWidth &&
+        mouseY >= visButtonY && mouseY <= visButtonY + visButtonHeight) {
+        visualize = !visualize;
+        resetRoad(false, false);
     }
 }
 
-function draw() {
-    drawTrafficLight(windowWidth - 140, windowHeight - 230, "red");
-    if (showRoad && timer >= 0) {
-        textSize(64);
-        fill(0,0,0);
-        if (timer == 3) {
-            drawTrafficLight(windowWidth - 140, windowHeight - 230, "red");
-        } else if (timer == 2) {
-            drawTrafficLight(windowWidth - 140, windowHeight - 230, "yellow");
-        } else {
-            drawTrafficLight(windowWidth - 140, windowHeight - 230, "green");
-        }
-        if (frameCount % 60 == 0) {
-            timer--;
-        }
-        AI_car.render();
-        player_car.render();
+function closerToStart(p1, p2) {
+    p1_val = Math.pow(p1[0] - 30, 2) + Math.pow(p1[1] - (windowWidth - 20), 2);
+    p2_val = Math.pow(p2[0] - 30, 2) + Math.pow(p2[1] - (windowWidth - 20), 2);
+    if (p2_val < p1_val) {
+        return 1;
     }
+    return -1;
+}
+
+function draw() {
     if (showRoad && timer <= 0) {
-        drawTrafficLight(windowWidth - 140, windowHeight - 230, "green");
         fill(156, 175, 136); // grass
         ellipse(player_car.xPos, player_car.yPos, 40, 40);
         ellipse(AI_car.xPos, AI_car.yPos, 40, 40);
 
         // filling in the car in the previous frame
         // filling in the base ellipses for the road outline:
+        // TODO: if visualizing, then there's no need for this
         fill(0, 0, 0);
         roadPoints.forEach(point => {
             // update player road
             var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
             // distance for the background must be less to avoid outlines
-            if (dist <= 90) {
+            if (dist <= 70) {
                 ellipse(point[0], point[1], 82, 82);
             }
             // update AI road
             var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
-            if (dist <= 90) {
+            if (dist <= 70) {
                 ellipse(point[0], point[1], 82, 82);
             }
         });
@@ -471,12 +606,12 @@ function draw() {
         roadPoints.forEach(point => {
             // update player road
             var dist = Math.sqrt(Math.pow(player_car.xPos - point[0], 2) + Math.pow(player_car.yPos - point[1], 2));
-            if (dist <= 150) {
+            if (dist <= 130) {
                 ellipse(point[0], point[1], 80, 80);
             }
             // update AI road
             var dist = Math.sqrt(Math.pow(AI_car.xPos - point[0], 2) + Math.pow(AI_car.yPos - point[1], 2));
-            if (dist <= 150) {
+            if (dist <= 130) {
                 ellipse(point[0], point[1], 80, 80);
             }
         });
@@ -492,12 +627,31 @@ function draw() {
         const keysPressed = [];
         if (keyIsDown(LEFT_ARROW)) { keysPressed.push("left"); }
         if (keyIsDown(RIGHT_ARROW)) { keysPressed.push("right"); }
-        if (keyIsDown(UP_ARROW)) { keysPressed.push("up"); }
+        if (keyIsDown(UP_ARROW)) {
+            keysPressed.push("up");
+            if (winner == "none") {
+                distanceTraveled += 3;
+            }
+        }
 
         if (winner == "none") {
             player_car.step(keysPressed);
         }
+    }
 
+    if (visualize) {
+        resetRoad(false, false);
+        
+        fill(255, 0, 0);
+        strokeWeight(1);
+        visPoints.forEach((point) => {
+            line(AI_car.xPos, AI_car.yPos, point[0], point[1]);
+            ellipse(point[0], point[1], 10, 10);
+        });
+        strokeWeight(0);
+    }
+    
+    if (showRoad && timer <= 0) {
         AI_car.render();
         player_car.render();
 
@@ -507,15 +661,18 @@ function draw() {
         if (AI_groundOn == GRASS_CODE) {
             AI_crash = true;
             clearInterval(predInterval); // stop AI driving;
-        } else if (AI_car.xPos > windowWidth - 50 && AI_car.yPos < 50) {
+        } else if (Math.sqrt(Math.pow(AI_car.xPos - finishPoint[0], 2) + Math.pow(AI_car.yPos - finishPoint[1], 2)) <= 82) {
             // WIN
             AI_crash = true;
-            fill(0,0,0);
+            fill(0, 0, 0);
             textSize(64);
             if (winner == "none") {
                 // AI WIN  
-                imageMode(CENTER);
-                winner = "human";
+                textAlign(CENTER);
+                textSize(80);
+                text("YOU LOSE", Math.round(windowWidth / 2), Math.round(windowHeight / 2));
+                textAlign(RIGHT);
+                winner = "ai";
             }
             clearInterval(predInterval); // stop AI driving;
         }
@@ -526,19 +683,45 @@ function draw() {
 
         if (groundOn == GRASS_CODE) {
             // LOSE
-            resetRoad();
-        } else if (player_car.xPos > windowWidth - 50 && player_car.yPos < 50) {
+            resetRoad(true, false);
+        } else if (Math.sqrt(Math.pow(player_car.xPos - finishPoint[0], 2) + Math.pow(player_car.yPos - finishPoint[1], 2)) <= 82) {
             // WIN
             AI_crash = true;
-            fill(0,0,0);
+            fill(0, 0, 0);
             textSize(64);
             if (winner == "none") {
                 // HUMAN WIN
-                imageMode(CENTER);
+                textAlign(CENTER);
+                textSize(80);
+                text("YOU WIN", Math.round(windowWidth / 2), Math.round(windowHeight / 2));
+                textAlign(RIGHT);
                 winner = "human";
             }
             clearInterval(predInterval); // stop AI driving;
         }
+    }
+
+    updateHeader();
+
+    if (showRoad && timer >= 0) {
+        textSize(64);
+        fill(0, 0, 0);
+        if (timer == 3) {
+            drawTrafficLight("1");
+        } else if (timer == 2) {
+            drawTrafficLight("2");
+        } else if (timer == 1) {
+            drawTrafficLight("3");
+        }
+        if (frameCount % 60 == 0) {
+            timer--;
+        }
+        AI_car.render();
+        player_car.render();
+    }
+
+    if (showRoad && timer <= 0) {
+        drawTrafficLight("4");
     }
 }
 
@@ -547,11 +730,38 @@ function smoothen() {
         b = [roadPoints[i + 1][0] - roadPoints[i - 1][0], roadPoints[i + 1][1] - roadPoints[i - 1][1]];
         a = [roadPoints[i][0] - roadPoints[i - 1][0], roadPoints[i][1] - roadPoints[i - 1][1]];
 
-        ab = b[0]*a[0] + b[1]*a[1];
-        bb = b[0]*b[0] + b[1]*b[1];
+        ab = b[0] * a[0] + b[1] * a[1];
+        bb = b[0] * b[0] + b[1] * b[1];
         stretchFactor = ab / bb;
-        
+
         roadPoints[i][0] = stretchFactor * b[0] + roadPoints[i - 1][0];
         roadPoints[i][1] = stretchFactor * b[1] + roadPoints[i - 1][1];
     }
+}
+
+function updateHeader() {
+    strokeWeight(0);
+    fill(126, 145, 96);
+    rect(0, 0, windowWidth, startButtonY * 2 + startButtonHeight);
+
+    image(startButtonImg, startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    image(resetButtonImg, startButtonX + startButtonWidth + 20, startButtonY, startButtonWidth, startButtonHeight);
+    image(visualizeImg, visButtonX, visButtonY, visButtonWidth, visButtonHeight);
+
+    fill(0, 0, 0);
+    textSize(70);
+    textAlign(CENTER);
+    text(distanceTraveled, Math.round(windowWidth / 2) - 85, startButtonHeight - 10);
+
+    textSize(30);
+    let numDistanceDigits;
+    if (distanceTraveled == 0) {
+        numDistanceDigits = 1;
+    } else {
+        numDistanceDigits = Math.floor(Math.log10(distanceTraveled) + 1);
+    }
+    text("meters", Math.round(windowWidth / 2) - 40 + numDistanceDigits * 20, startButtonHeight - 10);
+    strokeWeight(0);
+
+    drawTrafficLight("0");
 }
