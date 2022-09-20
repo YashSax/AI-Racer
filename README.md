@@ -7,7 +7,7 @@ https://user-images.githubusercontent.com/46911428/191157826-d043cd5a-db29-4eec-
 https://user-images.githubusercontent.com/46911428/191150451-e51e94e5-11f0-4e55-9616-a59644ed9eb9.mp4
 
 ## Training
-The agent was trained in a python pygame environment, then, once trained, ported over in Javascript to render on a webpage.
+The agent was trained in a python pygame environment, then, once trained, ported over to Javascript using p5.js to render on a webpage.
 ### Network Inputs
 The agent's observations included:
  - The distance straight to a road
