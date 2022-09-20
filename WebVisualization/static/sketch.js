@@ -54,6 +54,8 @@ let distanceTraveled = 0;
 let observation;
 
 let visPoints = [];
+let watched_tutorial = false;
+let tutorialImage;
 
 function pred() {
     if (AI_crash || !showRoad) {
@@ -262,6 +264,7 @@ function preload() {
 
     // background
     grassTexture = loadImage("https://i.ibb.co/vH5hw43/grass-Texture.jpg");
+    tutorialImage = loadImage("https://i.ibb.co/19V0WFk/tutorial-Background.png");
 }
 
 let visualize = false;
@@ -446,8 +449,6 @@ function resetRoad(resetPlayer, resetAI) {
     });
     strokeWeight(0);
     stroke(0, 0, 0);
-
-    visPoints = [];
 }
 function drawTrafficLight(stage) {
     let x = windowWidth - startButtonX - startButtonWidth - 10;
@@ -507,6 +508,10 @@ function drawTrafficLight(stage) {
 }
 
 function mouseClicked() {
+    if (!watched_tutorial) {
+        watched_tutorial = true;
+        resetRoad(false, false);
+    }
     if (mouseX >= startButtonX && mouseX <= startButtonX + startButtonWidth &&
         mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight && !showRoad) {
         saveBoard();
@@ -561,6 +566,7 @@ function mouseClicked() {
     } else if (mouseX >= startButtonX + startButtonWidth + 10 && mouseX <= startButtonX + 2 * startButtonWidth + 10 &&
         mouseY >= startButtonY && mouseY <= startButtonY + startButtonHeight) {
         resetRace();
+        visPoints = [];
     } else if (mouseX >= visButtonX && mouseX <= visButtonX + visButtonWidth &&
         mouseY >= visButtonY && mouseY <= visButtonY + visButtonHeight) {
         visualize = !visualize;
@@ -585,7 +591,6 @@ function draw() {
 
         // filling in the car in the previous frame
         // filling in the base ellipses for the road outline:
-        // TODO: if visualizing, then there's no need for this
         fill(0, 0, 0);
         roadPoints.forEach(point => {
             // update player road
@@ -641,7 +646,7 @@ function draw() {
 
     if (visualize) {
         resetRoad(false, false);
-        
+
         fill(255, 0, 0);
         strokeWeight(1);
         visPoints.forEach((point) => {
@@ -650,7 +655,7 @@ function draw() {
         });
         strokeWeight(0);
     }
-    
+
     if (showRoad && timer <= 0) {
         AI_car.render();
         player_car.render();
@@ -664,14 +669,8 @@ function draw() {
         } else if (Math.sqrt(Math.pow(AI_car.xPos - finishPoint[0], 2) + Math.pow(AI_car.yPos - finishPoint[1], 2)) <= 82) {
             // WIN
             AI_crash = true;
-            fill(0, 0, 0);
-            textSize(64);
             if (winner == "none") {
                 // AI WIN  
-                textAlign(CENTER);
-                textSize(80);
-                text("YOU LOSE", Math.round(windowWidth / 2), Math.round(windowHeight / 2));
-                textAlign(RIGHT);
                 winner = "ai";
             }
             clearInterval(predInterval); // stop AI driving;
@@ -687,14 +686,8 @@ function draw() {
         } else if (Math.sqrt(Math.pow(player_car.xPos - finishPoint[0], 2) + Math.pow(player_car.yPos - finishPoint[1], 2)) <= 82) {
             // WIN
             AI_crash = true;
-            fill(0, 0, 0);
-            textSize(64);
             if (winner == "none") {
                 // HUMAN WIN
-                textAlign(CENTER);
-                textSize(80);
-                text("YOU WIN", Math.round(windowWidth / 2), Math.round(windowHeight / 2));
-                textAlign(RIGHT);
                 winner = "human";
             }
             clearInterval(predInterval); // stop AI driving;
@@ -722,6 +715,24 @@ function draw() {
 
     if (showRoad && timer <= 0) {
         drawTrafficLight("4");
+    }
+
+    if (!watched_tutorial) {
+        showTutorial();
+    }
+
+    if (winner == "ai") {
+        fill(0, 0, 0);
+        textAlign(CENTER);
+        textSize(80);
+        text("YOU LOSE", Math.round(windowWidth / 2), Math.round(windowHeight / 2));
+        textAlign(RIGHT);
+    } else if (winner == "human") {
+        fill(0, 0, 0);
+        textAlign(CENTER);
+        textSize(80);
+        text("YOU WIN", Math.round(windowWidth / 2), Math.round(windowHeight / 2));
+        textAlign(RIGHT);
     }
 }
 
@@ -764,4 +775,24 @@ function updateHeader() {
     strokeWeight(0);
 
     drawTrafficLight("0");
+}
+
+function showTutorial() {
+    fill(255, 255, 255);
+    rect(Math.round(0.15 * windowWidth), Math.round(0.15 * windowHeight), Math.round(0.7 * windowWidth), Math.round(0.75 * windowHeight), 20);
+    imageMode(CENTER);
+    image(tutorialImage, Math.round(windowWidth / 2), Math.round(windowHeight / 2), Math.round(0.6 * windowWidth), Math.round(0.6 * windowHeight));
+    imageMode(CORNER);
+
+    image(humanCarImg, Math.round(0.3 * windowWidth), 0.35 * windowHeight, 30, 30);
+    image(AICarImg, Math.round(0.3 * windowWidth), 0.45 * windowHeight, 30, 30);
+
+    fill(255, 255, 255);
+    textSize(13);
+    text("YOU", Math.round(0.3 * windowWidth) + 15, 0.35 * windowHeight - 4)
+    text("AI driver", Math.round(0.3 * windowWidth) + 15, 0.45 * windowHeight - 4)
+
+    fill(0, 0, 0);
+    textSize(30);
+    text("Click anywhere to continue", Math.round(windowWidth / 2), Math.round(0.87 * windowHeight));
 }
