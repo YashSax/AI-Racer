@@ -23,7 +23,7 @@ The agent's observations included:
 ![image alt >](https://user-images.githubusercontent.com/46911428/191151872-84b86dbf-fc5d-44b4-9047-b59343554ee4.png)
 
 ### NEAT (Neuroevolution of Augmenting Topologies)
-NEAT is a NeuroEvolution algorithm, an algorithm that simulates genetic evolution for Reinforcement Learning (RL). For this AI Racer, 100 candidate neural networks are generated. Each candidate, while similar, has various mutations and differences in genotype that can cause it to perform better or worse than its peers. After all candidates are evaluated on some race track, the highest-performing cars reproduce to mix their genes, creating a new and improved generation of candidates. This process repeats until convergence or the AIs exceed some standard of performance (i.e. completing the race in under 30 seconds).
+NEAT is an evolutionary algorithm, an algorithm that simulates genetic evolution for Reinforcement Learning (RL). For this AI Racer, 100 candidate neural networks are generated. Each candidate, while similar, has various mutations and differences in genotype that can cause it to perform better or worse than its peers. After all candidates are evaluated on some race track, the highest-performing cars reproduce to mix their genes, creating a new and improved generation of candidates. This process repeats until convergence or the AIs exceed some standard of performance (i.e. completing the race in under 30 seconds).
 
 The AI winner currently driving generated this neural network:
 
