@@ -1,8 +1,8 @@
 # AI Racer
 An Artificially Intelligent agent that can drive on user-drawn racetracks using NEAT (Neuroevolution of Augmenting Topologies)
 
-Play at: <Used to be a link but currently switching to another hosting platform since Heroku is no longer free, my apologies>
-
+Play at: [website](https://ai-racer-service.onrender.com)
+Currently experiencing issues due to CPU utilization on free containers, for good performance, run locally by cloning and running app.py from the projects home directory.
 However, view some demos:
 
 https://user-images.githubusercontent.com/46911428/191157826-d043cd5a-db29-4eec-a1ea-7f4c9e39f8c5.mp4
