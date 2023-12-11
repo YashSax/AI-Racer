@@ -1,5 +1,5 @@
 # AI Racer
-An Artificially Intelligent agent that can drive on user-drawn racetracks using NEAT (Neuroevolution of Augmenting Topologies)
+An AI agent that can drive on user-drawn racetracks using NEAT (Neuroevolution of Augmenting Topologies)
 
 Play at: [website](https://ai-racer-service.onrender.com)
 Currently experiencing issues due to CPU utilization on free containers, for good performance, run locally by cloning and running app.py from the projects home directory.
